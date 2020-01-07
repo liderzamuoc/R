@@ -8,6 +8,6 @@ Se adjunta el fichero PRA2_tipologia.rmd; para que se pueda probar el codigo en 
 
 Los resultados de la limpieza y analisis lo podemos visualizar en el fichero PRA2_tipologia.html.
 
-Se recomienda leer la wiki donde encontrará la descripcion de los ficheros que están adjuntos.
+Se recomienda abrir la wiki y leer la pagina "Descripcion", alli encontrará una breve explicación de los ficheros que están adjuntos.
 
 
