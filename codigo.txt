@@ -1,0 +1,969 @@
+---
+title: 'Tipologia y ciclo de vida de los datos - Limpieza y analisis de los datos'
+author: "Autor: Lider E. Zambrano Zambrano"
+date: "Diciembre 2019"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    includes:
+      in_header: 
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# LIMPIEZA DE LOS DATOS.
+
+Primero cargamos nuestra data.
+
+```{r message= FALSE, warning=FALSE}
+data<-read.csv("./churn.csv",header=T,sep=",")
+attach(data)
+```
+
+Modificamos los nombres a los campos. 
+
+```{r message= FALSE, warning=FALSE}
+names(data) <- c("abandona","longitud_cuenta","plan_internacional","plan_correo_voz","mensajes_por_correo","minutos_dia","llamadas_dia","total_carga_dia","total_minutos","total_llamadas","total_carga","minutos_noche","llamadas_noche","total_carga_noche","minutos_internacionales", "llamadas_internacionales", "total_cargo_internacional","reclamos")
+```
+
+Seleccionamos las columnas que necesitamos
+```{r message= FALSE, warning=FALSE}
+data <- data[, c(1, 3, 6, 7, 12,13, 15,16,18)]
+```
+
+La función dim() nos permite conocer exactamente el número de filas y columnas de nuestro dataset.  
+
+```{r}
+dim(data)
+```
+
+Observamos 5000 registros y 9 variables, existian 18 variables pero hemos seleccionado solo las variables que necesitamos.
+
+## TRATAMIENTO DE CEROS O ELEMENTOS VACIOS
+
+Es de gran interes saber si tenemos muchos valores nulos (campos vacios) y la distribucion de valores por variables. Es por ello recomendable empezar el analisis con una vision general de las variables. Mostraremos para cada atributo la cantidad de valores perdidos mediante la funcion summary.  
+
+
+El nuestro conjunto de datos original no existian valores vacios; pero hemos eliminado algunos valores para tratarlos.
+
+```{r}
+summary(data)
+```
+
+```{r}
+# Revisamos nuevamente valores vacios
+colSums(is.na(data))
+```
+
+
+Vemos que existen 2 valores vacios en la variable minutos_dia y 2 valores vacios en la variable llamadas_dias.
+
+Ahora vamos a tratar los valores vacios por la media aritmetica en las variables discretas.
+
+```{r}
+# Tomamos la media para valores vacios de la variable "minutos_dia" y "llamadas_dia"
+data$minutos_dia[is.na(data$minutos_dia)] <- mean(data$minutos_dia,na.rm=T)
+data$llamadas_dia[is.na(data$llamadas_dia)] <- mean(data$llamadas_dia,na.rm=T)
+```
+
+Revisamos nuevamente la data, para verificar los cambios, y vemos que ya no existen valores vacios.
+
+```{r}
+# Revisamos nuevamente valores vacios
+colSums(is.na(data))
+```
+
+## IDENTIFICACION Y TRATAMIENTO DE VALORES EXTREMOS 
+
+Para identificar los valores extremos hemos utilizado un diagrama de cajas y la función boxplots.stats().
+
+* COLUMNA MINUTOS_DIA
+
+Primero calculamos los cuartiles 
+
+```{r}
+quantile(data$minutos_dia)
+```
+
+El primer dato es el valor minimo y el ultimo es el valor maximo, quiere decir que para esta variable hay clientes que no hablan ningun minuto al dia; y tambien hay usuarios que hablan hasta 351.5 minutos al dia. (no habra valores mayores a 351.5 ya que este es el valor maximo de la columna minutos_dia)
+
+Los otros 3 datos son los cuartiles, el cuartil 1 (143.7), el cuartil 2 (180.1) y el cuartil 3 (216.2); (el cuartil 2 que es 180.1 es la media).
+
+Podemos ver los datos de la columna minutos_dias en un diagrama de cajas, para ello trabajamos con el comando boxplot y observamos que existen valores fuera de los bigotes superior e inferior.
+
+```{r}
+boxplot(data$minutos_dia)
+```
+
+Ahora vamos a confirmar la existencia de datos atipicos para esto necesitamos el rango intercuartil que se lo obtiene con el comando IQR.
+
+El rango intercuartil (IQR) es la distancia entre el primer cuartil (Q1) y el tercer cuartil (Q3). El 50% de los datos está dentro de este rango.
+
+```{r}
+IQR(data$minutos_dia)
+```
+
+El rango intercuartil es 72.5 
+
+Para confirmar la existencia de un dato atipico necesitamos un rango; y lo calculamos asi:
+(El rango intercuartilar multiplicado por 1.5 y sumado el primer cuartil para encontrar el valor maximo del rango; a su vez el rango intercuartilar lo multiplicamos por 1.5 y restado el primer cuartil  encontramos el valor minimo del rango)
+
+```{r}
+MIN<-(143.7-1.5*72.5)
+MAX<-(143.7+1.5*72.5)
+```
+
+Ahora vamos a observar el rango que nos muestra el MIN y el MAX.
+
+```{r}
+range(MIN,MAX)
+```
+
+Si los datos de la columna minutos_dia; se encuentran dentro de este rango (34.95 y 252.45) significa que no hay datos atipicos, pero si hay un dato por fuera de este rango ese dato sera atipico.
+
+Veamos el rango de la columna de minutos_dia.
+
+```{r}
+range(data$minutos_dia)
+```
+
+Observamos que hay datos fuera del rango de MIN y MAX, eso quiere decir que tenemos datos atipicos.
+
+Pero ¿cuales son esos valores que estan fuera del rango de MIX y MAX?; los podemos observar con la funcion boxplot.stats.
+
+```{r}
+boxplot.stats(data$minutos_dia)$out
+```
+
+* COLUMNA LLAMADAS_DIA
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior e inferior. 
+
+```{r}
+boxplot(data$llamadas_dia)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$llamadas_dia)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$llamadas_dia)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(87-1.5*26)
+MAX<-(87+1.5*26)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre 48 y 126 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$llamadas_dia)$out
+```
+
+
+
+* COLUMNA MINUTOS_NOCHE
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior e inferior. 
+
+```{r}
+boxplot(data$minutos_noche)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$minutos_noche)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$minutos_noche)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(166.9-1.5*67.8)
+MAX<-(166.9+1.5*67.8)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre 65.2 y 268.6 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$minutos_noche)$out
+```
+
+*COLUMNA LLAMADAS_NOCHE
+
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior e inferior. 
+
+```{r}
+boxplot(data$llamadas_noche)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$llamadas_noche)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$llamadas_noche)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(87-1.5*26)
+MAX<-(87+1.5*26)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre 48 y 126 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$llamadas_noche)$out
+```
+
+* COLUMNA MINUTOS_INTERNACIONALES 
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior e inferior. 
+
+```{r}
+boxplot(data$minutos_internacionales)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$minutos_internacionales)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$minutos_internacionales)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(8.5-1.5*3.5)
+MAX<-(8.5+1.5*3.5)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre 3.25 y 13.75 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$minutos_internacionales)$out
+```
+
+* COLUMNA LLAMADAS_INTERNACIONALES 
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior. 
+
+```{r}
+boxplot(data$llamadas_internacionales)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$llamadas_internacionales)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$llamadas_internacionales)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(3-1.5*3)
+MAX<-(3+1.5*3)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre -1.5 y 7.5 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$llamadas_internacionales)$out
+```
+
+
+* COLUMNA RECLAMOS 
+
+Graficamos con el comando boxplot y observamos valores fuera del vigote superior. 
+
+```{r}
+muestra<-c(6,7)
+boxplot(data$reclamos)
+```
+
+calculamos los cuartiles 
+
+```{r}
+quantile(data$reclamos)
+```
+
+Calculamos el rango intercuartil
+
+```{r}
+IQR(data$reclamos)
+```
+Calculamos el valor minimo y maximo del nuevo rango para comparar con los valores extremos. 
+```{r}
+MIN<-(1-1.5*1)
+MAX<-(1+1.5*1)
+```
+
+Imprimimos los valores minimos y maximos.
+
+```{r}
+range(MIN,MAX)
+```
+
+Estos datos nos indican que si los valores estan entre -0.5 y 2.5 no son valores atipicos, fuera de estos si; luego observamos los valores que estan fuera de este rango .
+
+```{r}
+boxplot.stats(data$reclamos)$out
+```
+
+En todas las variables observamos que existen datos fuera del rango MIN y MAX; pero los valores no los podemos considerar datos extremos, por ejemplo observamos que estos valores pueden darse en la columna minutos_dia; ya que observamos que apenas hay 2 usuarios de 5000 que no registran minutos al dia, y también hay usuarios que han hablado hasta 350 minutos al dia: lo que corresponde a hablar 6 horas diarias aproximadamente (6 horas multiplicado por 60 minutos = 360 minutos), y esto es real en los usuarios más jóvenes en la telefonía celular, además de NO sobrepasar los 720 minutos que corresponden a las 12 horas en el dia.
+
+Sin embargo si tuviéramos un valor mayor a 720 minutos, ese dato correspondería a un valor extremo para esta columna.
+
+En la columna llamadas_dia vemos que estos valores también pueden darse, ya que pueden haber personas que hagan más de 126 llamadas en el dia considerando su situación laboral, el valor máximo de llamadas es 165 y si lo multiplicamos por 2.5 (que serían el tiempo en minutos que duraría cada llamada) da como resultado 412.5 minutos; un valor superior a los 350 minutos que una persona hablaría según el cálculo de la variable anterior.
+
+En las otras variables al tratarse de minutos y llamadas sucede el mismo caso, por lo que tampoco lo consideramos como valores extremos a aquellos datos que salen del rango de MIX y MAX.
+
+Y finalmente la columna reclamos, vemos que es normal  que los usuarios hayan hecho hasta 9 llamadas al servicio de llamadas, ya sea por tratarse de anular algún servicio o presentar otras inconformidades por el servicio.
+
+# ANALISIS DE LOS DATOS
+
+## SELECCIÓN DE LOS GRUPOS DE DATOS QUE SE QUIEREN ANALIZAR/COMPARAR 
+A continuación, se seleccionan los grupos dentro de nuestro conjunto de datos que pueden resultar interesantes para analizar y/o comparar. 
+
+```{r}
+# Agrupacion por plan internacional
+grupo1_plan <- data[, c(1,2)]
+data_sinplan <- grupo1_plan[grupo1_plan$plan_internacional == "no",]
+data_plan_int <- grupo1_plan[grupo1_plan$plan_internacional == "yes",]
+```
+
+El comando summary nos muestra los resultados de cada grupo del plan internacional.
+```{r}
+summary(data$plan_internacional)
+```
+
+```{r}
+# Agrupacion por churn (abandona)
+grupo2_churn <- data[, c(1,2)]
+data.NOabandona <- grupo2_churn[grupo2_churn$abandona == "No",]
+data.SIabandona <- grupo2_churn[grupo2_churn$abandona == "Yes",]
+```
+
+El comando summary nos muestra los resultados de cada grupo de la variable abandona.
+```{r}
+summary(data$abandona)
+```
+
+Para agrupar por churn(abandona) y plan internacional; utilizaremos el comando table.
+```{r}
+table(data$abandona,data$plan_internacional)
+```
+
+Para agrupar por llamadas al dia y churn utilizamos un grafico, para facilitar la comprension de los datos.
+
+```{r}
+# Agrupacion por llamadas al dia
+data2 <- data[, c(1,4)]
+plot(data2)
+```
+
+## COMPROBACION DE LA NORMALIDAD Y HOMOGENEIDAD DE LA VARIANZA
+
+Para la comprobación de que los valores que toman nuestras variables cuantitativas  provienen de una población distribuida normalmente, utilizaremos la prueba de normalidad de Anderson-Darling.
+
+Así, se comprueba que para que cada prueba se obtiene un p-valor superior al nivel de
+significación prefijado alpha = 0, 05 o alpha= 0,10. Si esto se cumple, entonces se considera que variable en cuestión sigue una distribución normal.
+
+```{r}
+library(nortest)
+alpha = 0.05
+col.names = colnames(data)
+for (i in 1:ncol(data)) {
+if (i == 1) cat("Variables que no siguen una distribucion normal:\n")
+if (is.integer(data[,i]) | is.numeric(data[,i])) {
+p_val = ad.test(data[,i])$p.value
+if (p_val < alpha) {
+cat(col.names[i])
+# Format output
+if (i < ncol(data) - 1) cat(", ")
+if (i %% 3 == 0) cat("\n")
+}
+}
+}
+```
+
+* VEAMOS LA GRAFICA DE LA COLUMNA LLAMADAS_DIA.
+
+EN ESTE EJERCICIO CONSIDERAMOS QUE LA HIPOTESIS NULA ES: Ho = "La muestra proviene de una poblacion con distribucion normal".
+
+Observemos el Histograma + la Curva normal teorica
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = llamadas_dia)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$llamadas_dia),
+                            sd = sd(data$llamadas_dia))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable llamadas_dia que no sigue una distribución normal. 
+
+```{r}
+plot(density(data$llamadas_dia))
+```
+
+Aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$llamadas_dia)$p.value
+```
+
+A pesar de que en la grafica observamos una figura simetrica o bastante simetrica, vemos que al aplicar la prueba de Anderson - Darling el valor que obtenemos es menor con relacion al 5% de referencia, por lo tanto nuestra conclusion es que rechazamos la hipotesis nula (Ho).
+
+* VEAMOS LA GRAFICA DE LA COLUMNA LLAMADAS_NOCHE
+
+Observemos el Histograma + la Curva Normal teórica 
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = llamadas_noche)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$llamadas_noche),
+                            sd = sd(data$llamadas_noche))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable llamadas_noche que no sigue una distribución normal. 
+
+```{r}
+plot(density(data$llamadas_noche))
+```
+
+Finalmente aplicamos la prueba de Anderson - Darling.
+
+```{r}
+ad.test(data$llamadas_noche)$p.value
+```
+
+Como el valor obtenido aplicando la prueba de Anderson-darling se acerca a 5%, ya que nos da un resultado de 3.7% aplicamos la prueba de Kolmogorov-Smirnov con el comando Lillie para comparar y verificar los valores de la probabilidad. 
+
+```{r}
+lillie.test(data$llamadas_noche)$p.value
+```
+
+Con este resultado no tenemos duda, tenemos un valor bien por debajo del 5%. 
+
+A pesar de que en la grafica observamos una figura simetrica o bastante simetrica, vemos que al aplicar la prueba de Anderson - Darling y la prueba de Kolmogorov-Smirnov el valor que obtenemos es menor con relacion al 5% de referencia, por lo tanto nuestra conclusion es que rechazamos la hipotesis nula (Ho).
+
+
+* VEAMOS LA GRAFICA DE LA COLUMNA MINUTOS_INTERNACIONALES
+
+Observemos el Histograma + la Curva Normal teórica 
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = minutos_internacionales)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$minutos_internacionales),
+                            sd = sd(data$minutos_internacionales))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable minutos_internacionales que no sigue una distribución normal.
+
+```{r}
+plot(density(data$minutos_internacionales))
+```
+
+Finalmente aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$minutos_internacionales)$p.value
+```
+
+En la grafica observamos una figura un poco simetrica ,vemos tambien que al aplicar la prueba de Anderson - Darling el valor que obtenemos es bastante menor con relacion al 5% de referencia, por lo tanto nuestra conclusion es que rechazamos la hipotesis nula (Ho).
+
+
+* VEAMOS LA GRAFICA DE LA COLUMNA LLAMADAS_INTERNACIONALES.
+
+Observemos el Histograma + la Curva Normal teórica 
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = llamadas_internacionales)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$llamadas_internacionales),
+                            sd = sd(data$llamadas_internacionales))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable llamadas_internacionales que no sigue una distribución normal.
+```{r}
+plot(density(data$llamadas_internacionales))
+```
+
+Aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$llamadas_internacionales)$p.value
+```
+
+En la grafica observamos una figura ASIMETRICA ,vemos tambien que al aplicar la prueba de Anderson - Darling el valor que obtenemos es bastante menor con relacion al 5% de referencia, por lo tanto nuestra conclusion es que rechazamos la hipotesis nula (Ho).
+
+* VEAMOS LA GRAFICA DE LA COLUMNA RECLAMOS
+
+Observemos el Histograma + la Curva Normal teórica
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = reclamos)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$reclamos),
+                            sd = sd(data$reclamos))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable reclamos que no sigue una distribución normal.
+
+```{r}
+plot(density(data$reclamos))
+```
+
+Aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$reclamos)$p.value
+```
+
+En la grafica observamos una figura ASIMETRICA ,vemos tambien que al aplicar la prueba de Anderson - Darling el valor que obtenemos es bastante menor con relacion al 5% de referencia, por lo tanto nuestra conclusion es que rechazamos la hipotesis nula (Ho).
+
+* VEAMOS LA GRAFICA DE LA COLUMNA MINUTOS_DIA
+
+Observemos el Histograma + la Curva Normal teórica
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = minutos_dia)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$minutos_dia),
+                            sd = sd(data$minutos_dia))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+
+Ahora podemos observar la curva de la variable minutos_dia que sigue una distribución normal.
+```{r}
+plot(density(data$minutos_dia))
+```
+
+Aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$minutos_dia)$p.value
+```
+
+En la grafica observamos una figura bastante simetrica, vemos tambien que al aplicar la prueba de Anderson - Darling el valor que obtenemos es bastante mayor con un 88% con relacion al 5% de referencia, por lo tanto nuestra conclusion es que NO rechazamos la hipotesis nula (Ho), es decir aceptamos que la muestra proviene de una distribucion normal. 
+
+* VEAMOS LA GRAFICA DE LA COLUMNA MINUTOS_NOCHE
+
+Observemos el Histograma + la Curva Normal teórica
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = minutos_noche)) +
+  geom_histogram(aes(y = ..density.., fill = ..count..)) +
+  scale_fill_gradient(low = "#DCDCDC", high = "#7C7C7C") +
+  stat_function(fun = dnorm, colour = "firebrick",
+                args = list(mean = mean(data$minutos_noche),
+                            sd = sd(data$minutos_noche))) +
+  ggtitle("Histograma + curva normal teorica") +
+  theme_bw()
+```
+
+Ahora podemos observar la curva de la variable minutos_dia que sigue una distribución normal.
+
+```{r}
+plot(density(data$minutos_noche))
+```
+
+Aplicamos la prueba de Anderson - Darling
+```{r}
+ad.test(data$minutos_noche)$p.value
+```
+
+En la grafica observamos una figura bastante simetrica, vemos tambien que al aplicar la prueba de Anderson - Darling el valor que obtenemos es bastante mayor con un 90% con relacion al 5% de referencia, por lo tanto nuestra conclusion es que NO rechazamos la hipotesis nula (Ho), es decir que aceptamos que la muestra proviene de una distribucion normal. 
+
+* PRUEBA DE HOMOGENEIDAD (Ho= "Las varianzas poblacionales son iguales")
+
+Primero aplicamos Test de Bartlett que permite contrastar la igualdad de varianza en 2 o más poblaciones sin necesidad de que el tamaño de los grupos sea el mismo. Es más sensible que el test de Levene a la falta de normalidad.
+
+varianza por test de Bartlett
+```{r}
+bartlett.test(minutos_dia ~ abandona, data = data)
+```
+
+Luego vamos a ver la Varianza por test de Fligner-Killeen
+```{r}
+fligner.test(minutos_dia ~ abandona, data = data)
+```
+
+y finalmente para estas dos columnas probamos la Varianza por el test de Levene
+
+```{r}
+library(lawstat)
+levene.test(data$minutos_dia, data$abandona)
+```
+
+En los tres casos el valor de la probabilidad (p-value) es un numeros menor a 0.05 (5%); por lo que rechazamos la Ho.(exactamente el p-value en decimal es 0.00000000000000022)
+
+
+Veamos la varianza entre reclamos y abandona por el test de Levene
+
+```{r}
+library(lawstat)
+levene.test(data$reclamos, data$abandona)
+```
+
+Tambien observamos que el p-value es un numero muy pequeño, menor al %5 re referencia; por lo que rechazamos la hipotesis nula. 
+
+
+Varianza por test de Bartlett entre llamadas_dia y abandona.
+```{r}
+bartlett.test(llamadas_dia ~ abandona, data = data)
+```
+
+En vista que el p-value es igual al 5% NO rechazamos la hipotesis nula, por lo tanto concluimos de que existe homogeneidad de varianzas, es decir que la varianza de ambas muestras son iguales.
+
+
+## PRUEBAS ESTADISTICAS
+
+ 
+### PRIMERA PRUEBA ESTADISTICA: PRUEBA DE CONTRASTE DE HIPOTESIS MEDIANTE LA COMPARACION DE LA TENDENCIA CENTRAL.
+ 
+ ANALISIS DE RELACION ENTRE UNA VARIABLE CUANTITATIVA Y OTRA CUALITATIVA.
+ 
+ Tenemos dos variables que vamos a comparar: 
+ 
+ X= ABANDONA (cualitativa)
+ 
+ Y= LLAMADAS DIA (cuantitativa)
+ 
+Veamos la estructura de los datos de las dos variables a comparar.
+
+```{r message= FALSE, warning=FALSE}
+data2 <- data[, c(1,4)]
+summary(data2)
+```
+
+
+Veamos tambien los primeros 6 registros de ambas columnas.
+
+```{r message= FALSE, warning=FALSE}
+head(data2)
+```
+
+Partimos de la hipotesis de que ambas variables son independientes, formulado en una pregunta quedaria:
+
+¿Los clientes que abandonan la compañia son independientes al número de llamadas que realizan diariamente?
+ 
+Para determinar si estas dos variables (cualitativa y cuantitativa) estan relacionadas o son independientes; analizaremos sus medias, es decir que si sabemos que la media o la mediana de las llamadas que realiza el cliente son iguales para quienes abandonen o no abandonen la compania; podemos afirmar que ambas variables son independientes, es decir que quienes abandonan la compania no dependen del numero de llamadas que realizan; si por el contrario se prueba que las medias o las medianas son diferentes podemos concluir que ambas variables estan relacionadas, y que por lo tanto los clientes que abandonan la compania dependen del numero de llamadas telefonicas que realizan a diario.
+
+Veamos una grafica.
+
+```{r}
+plot(data2)
+```
+
+
+Podemos ver que la media entre los clientes que abandonan la compania y la media de los clientes que no abandonan la compania es la misma; de modo que NO rechazamos la hipotesis nula (Ho= la media del primer grupo es igual a la del segundo grupo);por lo tanto concluimos que quienes abandonan la compania NO dependen de las llamadas telefonicas diarias.
+
+Aplicamos una prueba T-STUDENT para comprobar la igualdad de las medias de los dos grupos.
+
+
+```{r}
+t.test(llamadas_dia ~ abandona, data=data, var.equal = TRUE)
+```
+
+Observamos que la prueba T-STUDENT nos permite conocer la media de los dos grupos, donde nuevamente concluimos que son iguales, además el p-value del 26% que es superior al 5% de referencia nos indica que las muestras son iguales, de modo que no rechazamos la hipotesis nula. 
+
+### SEGUNDA PRUEBA ESTADISTICA: PRUEBA DEL CHI CUADRADO
+
+La prueba de Chi-cuadrado en R es un método estadístico que se utiliza para determinar si dos variables categóricas tienen una correlación significativa entre ellas.
+
+Hipotesis de partida= las dos variables en estudio son independientes.
+
+Observamos las columnas con las que vamos a trabajar en esta prueba estadistica.
+
+```{r message= FALSE, warning=FALSE}
+data2 <- data[, c(1,2)]
+summary(data2)
+```
+
+Con la funcion summary encontramos un resumen de los datos de ambas columnas, donde tenemos que en la columna abandona 4293 clientes NO abandonan la compania y 707 si lo hacen.
+
+EN la columna plan internacional que 4527 personas NO tienen plan internacional y 473 si lo tienen, cabe indicar que en este resumen las columnas no estan relacionadas.
+
+Ahora veamos una tabla de frecuencias con los datos de ambas columnas relacionados, estos serian las frecuencias observadas. 
+
+Los datos obtenidos en esta tabla nos dice que 4019 clientes que no tienen plan internacional NO abandonan la compania, y 274 clientes que registraban plan internacional tampoco abandonaron la compania.
+
+Por el contrario 508 clientes que no tenian plan internacional SI abandonaron la compania y 199 usuarios que tenian plan internacional tambien abandonaron la compania.
+
+TABLA DE FRECUENCIAS OBSERVADAS.(Se ha agregado las frecuencias marginales para las filas y columnas con el comando addmargins)
+```{r message= FALSE, warning=FALSE}
+table(data2)
+tabla<-table(data2)
+addmargins(tabla)
+```
+
+Ahora podemos observar las frecuencias esperadas, redondeadas a 2 decimales. 
+
+TABLA DE FRECUENCIAS ESPERADAS.
+
+```{r message= FALSE, warning=FALSE}
+esperados<-chisq.test(tabla)$expected
+b<-round(esperados,2)
+b
+```
+
+Presentamos los datos de la tabla de frecuencias observadas en porcentajes, redondeados a 3 decimales.
+
+```{r message= FALSE, warning=FALSE}
+porc<-(prop.table(tabla))
+a<-round(porc,3)
+a
+```
+
+Aplicamos la prueba estadistica del CHI CUADRADO.
+
+```{r message= FALSE, warning=FALSE}
+chisq.test(x = tabla)
+```
+
+OBTENEMOS COMO RESPUESTA A LA PRUEBA DEL CHI CUADRADO EL VALOR DE: 333.19.
+
+Ahora para aceptar o rechazar la hipotesis nula (Ho= ambas variables son independientes) obtenemos el valor critico tabular de chi-cuadrado, al 95% con 1 grado de libertad. 
+
+```{r message= FALSE, warning=FALSE}
+qchisq(0.95,1)
+```
+
+La respuesta del valor teorico con un nivel de riesgo del 5% y con 1 grado de libertad es: 3.84.
+
+CONCLUSION: Nuestro valor experimental (333.19) es mayor al valor teorico (3.84), por lo que rechazamos la hipotesis nula y asuminos la hipotesis alternativa, lo que quiere decir que ambas variables estan relacionadas, pero estan relacionadas de forma inversa, es decir que mientras existan menos clientes con plan internacional, aumentaran el numero de clientes que NO abandonaran la compania. (Esta conclusion es para el 90% de las observaciones)
+
+Para un 10% de clientes, las variables estan relacionadas de forma directa: es decir que si aumentan los planes internacionales tambien aumentaran los clientes que NO abandonan la compania.
+
+Ahora veamos un grafico de barras, para visualizar la relacion entre la variable plan internacional y la variable abandona. (En la primera barra observamos la relacion inversa y en la segunda barra la relacion directa).
+
+
+```{r message= FALSE, warning=FALSE}
+if(!require(ggplot2)){
+    install.packages('ggplot2', repos='http://cran.us.r-project.org')
+    library(ggplot2)
+}
+if(!require(grid)){
+    install.packages('grid', repos='http://cran.us.r-project.org')
+    library(grid)
+}
+if(!require(gridExtra)){
+    install.packages('gridExtra', repos='http://cran.us.r-project.org')
+    library(gridExtra)
+}
+```
+
+```{r message= FALSE, warning=FALSE}
+grid.newpage()
+plotbyplan1<-ggplot(data,aes(plan_internacional,fill=abandona))+geom_bar() +labs(x="plan internacional", y="Clientes")+ guides(fill=guide_legend(title=""))+ scale_fill_manual(values=c("black","#008000"))+ggtitle("Usuarios con plan internacional")
+grid.arrange(plotbyplan1,ncol=2)
+```
+
+En el grafico de barras y la informacion de la tabla de frecuencias observadas; vemos que la gran mayoria de usuarios no tienen plan internacional, son exactamente 4527 usuarios que no tienen plan internacional, de los cuales solo 508 abandonan la compania pero 4019 no lo hicieron (relacion inversa); por otro lado vemos que existen 473 usuarios que tienen plan internacional y 274 no abandonaron la compania y 199 de ellos si lo hicieron (relacion directa).
+
+
+### TERCER METODO DE ANALISIS: ARBOLES DE CLASIFICACION Y REGRESION.
+
+Modelo de clasificación: Árbol de decisión C5.0
+
+Nuestro objetivo es crear un Árbol de decisión que permita analizar qué tipo de usuarios de nuestra data ha tenido probabilidades de abandonar la compañia. Por lo tanto, la variable por la que clasificaremos es el campo "“abandona”.
+
+Para la futura evaluación del Árbol de decisión, es necesario dividir el conjunto de datos en un conjunto de entrenamiento y un conjunto de prueba.
+
+Seleccionamos la columna 1 donde se encuentra nuestra variable dependiente, y luego seleccionamos las demas columnas donde se encuentran las variables que se relacionan con la variable "abandona". 
+
+```{r}
+new_data<-data[, c(1, 2, 3, 7, 9)]
+set.seed(666)
+y <- new_data[,1] 
+X <- new_data[,2:5] 
+```
+
+Observamos los nombres de las columnas.
+
+```{r}
+names(new_data)
+```
+
+calculamos a cuantas filas corresponde dos tercios de los datos (2*5000/3=3333) y dividimos "manualmente" el conjunto.
+
+```{r}
+trainX <- X[1:3333,]
+trainy <- y[1:3333]
+testX <- X[3334:5000,]
+testy <- y[3334:5000]
+```
+
+
+#### Creacion del modelo, calidad del modelo y extraccion de reglas
+
+Se crea el Arbol de decision usando los datos de entrenamiento:
+
+```{r}
+model <- C50::C5.0(trainX, trainy,rules=TRUE )
+summary(model)
+```
+
+Observamos que el algoritmo se ha aplicado a 3333 casos con 5 variables;
+
+REGLA 1: En la regla 1 observamos a la "class No" con un 95% lo que nos indica   que la mayoria de los usuarios no abandonan la compañia, observamos que de 2604 casos analizados por el algoritmo solo un total de 128 usuarios abandonan la compañia.
+
+Este 95% que se queda en la compañia, no tienen registrados un plan internacional, y los minutos de llamadas al dia son <= a 264.4 y sus reclamos son <= a 3.
+
+REGLA 2: En la regla 2 observamos a la "class No" con un 93.5% lo que nos indica   que la mayoria de los usuarios no abandonan la compañia, observamos que de 2475 casos analizados por el algoritmo solo un total de 160 usuarios abandonan la compañia.
+
+Este 93.5% que se queda en la compañia, los minutos de llamadas al dia son <= a 264.4;  además sus minutos internacionales son <= a 13.1 y sus reclamos son <= a 3.
+
+REGLA 3: En la regla 3 observamos a la "class No" con un 88.9% lo que nos indica   que la mayoria de los usuarios no abandonan la compañia, observamos que de 1896 casos analizados por el algoritmo un total de 210 usuarios abandonan la compañia.
+
+
+Este 88.9% que se queda en la compañia, los minutos de llamadas al dia son mayores a 160.2, pero son menores o iguales a 264.4
+
+REGLA 4: En la regla 4 observamos a la "class Yes" con un 98.3% lo que nos indica   que la mayoria de los usuarios abandonan la compañia, observamos a 57 casos analizados por el algoritmo, con un lift alto de 6.8.
+
+Estos usuarios si tienen registrados un plan internacional, y sus minutos internacionales son mayores a 13.1
+
+REGLA 5: En la regla 5 observamos a la "class Yes" con un 86.5% lo que nos indica que la mayoria de los usuarios abandonan la compañia; de los 102 casos analizados 13 NO abandonan la compañia. Los minutos al dia de estos usuarios son <= a 160.2 y sus reclamos son > a 3.
+
+REGLA 6: En la regla 6 observamos a la "class Yes" con un 60.1%; lo que nos indica que la mayoria abandona la compañia, de 211 casos 84 no abandonan la compañia.
+
+Estos usuarios registran minutos al dia > 264.4.
+
+De acuerdo a la estimación del error del modelo se tiene que existe un 9.4% de error que corresponden a 313 casos.
+
+
+A continuacion mostramos el Arbol obtenido.
+
+```{r}
+model <- C50::C5.0(trainX, trainy)
+print(model)
+plot(model)
+```
+
+n indica el numero de muestras.
+
+El algoritmo ha considerado que a partir de responder las diferentes variables que ha estado seleccionando incluido un valor que ha considerado oportuno podemos determinar quienes se van y quienes no de la compania.
+
+El mejor corte que se ha podido hacer es a partir de preguntar si los minutos que hablan los usuarios son menores o iguales a 264.4 minutos al dia; si las personas hablan 264.4 minutos al dia o menos; se les realiza otra pregunta: ¿sus llamadas por reclamos son menores o iguales que 3?; si la persona registra 3 o menos reclamos; se le vuelve a preguntar ¿tienen plan internacional?; si no tiene plan internacional, la mayoria no abandona la compañia en un 95% (donde n=2604); un 5% si lo hará.
+
+Ahora si las personas tienen plan internacional: se les formularia esta pregunta ¿cuantos minutos hablan con familiares o amigos en el extranjero?; si hablan 13.1 minutos o menos la mayoria no abandona la compañia en un 78%; un 22% si lo hará(donde n=219); si hablan mas de 13.1 minutos el 100% abandona la compañia(donde n=48).
+
+Si las personas registran mas de 3 reclamos y hablan 160.2 minutos o menos, el 90% abandona la compañia un 10% no lo hará (donde n=102); si las personas registran mas de 3 reclamos y hablan mas de 160.2 minutos al dia el 78% no abandona la compañia; el 22% si lo hará. (donde n=149).
+
+Finalmente: si las personas hablan mas de 264.4 minutos al dia, el 60% abandona la compañia y el 40% no lo hará.(donde n=211)
+
+#### Validacion del modelo con los datos reservados
+
+Una vez tenemos el modelo, podemos comprobar su calidad prediciendo la clase para los datos de prueba que nos hemos reservado al principio. 
+
+```{r}
+predicted_model <- predict( model, testX, type="class" )
+print(sprintf("La precision del Arbol es: %.4f %%",100*sum(predicted_model == testy) / length(predicted_model)))
+```
+
+Tenemos a nuestra disposicion el paquete gmodels para obtener informacion completa sobre los resultados que ha podido predecir nuestro modelo. 
+
+```{r}
+if(!require(gmodels)){
+    install.packages('gmodels', repos='http://cran.us.r-project.org')
+    library(gmodels)
+}
+```
+
+```{r}
+CrossTable(testy, predicted_model,prop.chisq  = FALSE, prop.c = FALSE, prop.r =FALSE,dnn = c('Resultado real', 'Prediccion'))
+```
+
+En este apartado vemos la informacion mas completa; sobre los resultados que ha podido predecir nuestro modelo. 
+
+Donde vemos que el modelo ha dicho que es falso para 1394 casos cuando realmente eran falso; y ha dicho que es falso a 104 casos que realmente eran verdadero; el modelo tambien ha dicho que ha sido verdadero a 49 casos que realmente eran falsos, y ha dicho que es verdadero a 120 casos que realmente eran verdaderos.
+
